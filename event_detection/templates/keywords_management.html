@@ -1,0 +1,109 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <head>
+        <script type="text/javascript" language="javascript">
+            $(document).ready(function () {
+                $('button.btn-delete').bind('click', function (event) {
+                    var keyword_id = $(this).attr("id");
+                    console.log("check delete", keyword_id);
+                    $.ajax({
+                        type: 'GET',
+                        url: "{% url 'delete_keyword' %}",
+                        data: {"keyword_id": keyword_id},
+                        dataType: 'json',
+                        success: function (response) {
+                            $('#tr-'.concat(keyword_id)).remove();
+                        },
+                        error: function (response) {
+                            alert(response);
+                        }
+                    });
+                });
+
+                $('button.btn-stop').bind('click', function (event) {
+                    var keyword_id = $(this).attr("id");
+
+                    $.ajax({
+                        type: 'GET',
+                        url: "{% url 'stop_streaming' %}",
+                        data: {"keyword_id": keyword_id},
+                        dataType: 'json',
+                        success: function (response) {
+                            $('#tr-'.concat(keyword_id).concat(" td#td-streaming")).text("Finished");
+                        },
+                        error: function (response) {
+                            alert(response);
+                        }
+                    });
+                });
+            });
+        </script>
+    </head>
+
+    <div class="pagetitle">
+        <h1>Keywords Management</h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item active">Keywords Management</li>
+            </ol>
+        </nav>
+
+    </div>
+    <div class="col-12">
+
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Keywords</h5>
+                <table class="table table-hover">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Keyword</th>
+                        <th scope="col">Resource</th>
+                        <th scope="col">Search Date</th>
+                        <th scope="col">End Date</th>
+                        <th scope="col">Status</th>
+                        <th scope="col">Tweets</th>
+                        <th scope="col">Handle</th>
+                        <th scope="col">Delete</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for key in keywords %}
+                        <div>
+                            <tr id="tr-{{ key.id }}">
+                                <th scope="row">{{ forloop.counter }}</th>
+                                <td><a href="{% url 'view_analysis' pk=key.pk %}">{{ key.keyword }}</a></td>
+                                {% if key.resource == 0 %}
+                                    <td>All countries (geo-tag)</td>
+                                {% else %}
+                                    <td>Three major countries (news media)</td>
+                                {% endif %}
+                                <td>{{ key.search_date }}</td>
+                                <td>{{ key.end_date }}</td>
+                                {% if key.is_streaming %}
+                                    <td id="td-streaming">Running</td>
+                                {% else %}
+                                    <td id="td-streaming">Finished</td>
+                                {% endif %}
+                                <td>{{ key.n_tweets }}</td>
+                                <td>
+                                    <button class="btn-stop btn-warning" id="{{ key.id }}">Stop</button>
+                                </td>
+                                <td>
+                                    <button class="btn-delete btn-danger" id="{{ key.id }}">Delete</button>
+                                </td>
+                            </tr>
+                        </div>
+                    {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+{% endblock %}

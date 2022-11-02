@@ -1,0 +1,254 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+    <head>
+    </head>
+
+    <div class="pagetitle">
+        <h1>API Documents</h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item">API Documents</li>
+            </ol>
+        </nav>
+    </div>
+
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <br>
+                <p>The system provides APIs to allow easy interact with data in the system.</p>
+
+                <h5 class="card-title">Authentication</h5>
+                This API will get authenticate token to verify user account.
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <div>
+                        <tr>
+                            <th scope="row">1</th>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <a href="http://recsys.cau.ac.kr:8086/sociopedia/api-token-auth/">
+                                    http://recsys.cau.ac.kr:8086/sociopedia/api-token-auth/
+                                </a>
+                            </td>
+                            <td style="word-wrap: break-word;min-width: 40px;max-width: 160px;">POST</td>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <ul>
+                                    <li><i>username</i>: username of the account</li>
+                                    <li><i>password</i>: password of the account</li>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </div>
+
+                    </tbody>
+                </table>
+
+
+                <br/>
+                <h5 class="card-title">Keywords</h5>
+                This API allows to query a list of keywords which user monitoring in the system.
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <div>
+                        <tr>
+                            <th scope="row">1</th>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <a href="http://recsys.cau.ac.kr:8086/sociopedia/keywords/">
+                                    http://recsys.cau.ac.kr:8086/sociopedia/keywords/
+                                </a>
+                            </td>
+                            <td style="word-wrap: break-word;min-width: 40px;max-width: 160px;">GET</td>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <ul>
+                                    <li>In the HTTP header, parameter is <i>Authorization</i>: token to authorize the
+                                        account
+                                    </li>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </div>
+
+                    </tbody>
+                </table>
+
+
+                <br/>
+                <h5 class="card-title">Tweets</h5>
+                This API allows to get a list of tweets streaming based on a given keyword.
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <div>
+                        <tr>
+                            <th scope="row">1</th>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <a href="http://recsys.cau.ac.kr:8086/sociopedia/tweet_list/?keyword_id=">
+                                    http://recsys.cau.ac.kr:8086/sociopedia/tweet_list/?keyword_id=
+                                </a>
+                            </td>
+                            <td style="word-wrap: break-word;min-width: 40px;max-width: 160px;">GET</td>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <ul>
+                                    <li><i>keyword_id</i>: id of the keyword which use to stream data</li>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </div>
+
+                    </tbody>
+                </table>
+
+
+                <br/>
+                <h5 class="card-title">Topics</h5>
+                This API allows to get extracted topics from tweets streaming based on a given keyword.
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <div>
+                        <tr>
+                            <th scope="row">1</th>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <a href="http://recsys.cau.ac.kr:8086/sociopedia/topic_list/?keyword_id=">
+                                    http://recsys.cau.ac.kr:8086/sociopedia/topic_list/?keyword_id=
+                                </a>
+                            </td>
+                            <td style="word-wrap: break-word;min-width: 40px;max-width: 160px;">GET</td>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <ul>
+                                    <li><i>keyword_id</i>: id of the keyword which use to stream data</li>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </div>
+
+                    </tbody>
+                </table>
+
+
+                <br/>
+                <h5 class="card-title">Events</h5>
+                This API allows to get extracted events based on a given keyword and a extracted topic.
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <div>
+                        <tr>
+                            <th scope="row">1</th>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <a href="http://recsys.cau.ac.kr:8086/sociopedia/event_list/?keyword_id=&topic=">
+                                    http://recsys.cau.ac.kr:8086/sociopedia/event_list/?keyword_id=&topic=
+                                </a>
+                            </td>
+                            <td style="word-wrap: break-word;min-width: 40px;max-width: 160px;">GET</td>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <ul>
+                                    <li><i>keyword_id</i>: id of the keyword which use to stream data</li>
+                                    <li><i>topic</i>: extracted topic from data</li>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </div>
+
+                    </tbody>
+                </table>
+
+
+                <br/>
+                <h5 class="card-title">Event Knowledge</h5>
+                This API allows to get knowledge extracted from a detected event.
+
+                <table class="table">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">URL</th>
+                        <th scope="col">Method</th>
+                        <th scope="col">Parameters</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <div>
+                        <tr>
+                            <th scope="row">1</th>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <a href="http://recsys.cau.ac.kr:8086/sociopedia/event_knowledge_list/?keyword_id=&topic=&start_date=&end_date=">
+                                    http://recsys.cau.ac.kr:8086/sociopedia/event_knowledge_list/?keyword_id=&topic=&start_date=&end_date=
+                                </a>
+                            </td>
+                            <td style="word-wrap: break-word;min-width: 40px;max-width: 160px;">GET</td>
+                            <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">
+                                <ul>
+                                    <li><i>keyword_id</i>: id of the keyword which use to stream data</li>
+                                    <li><i>topic</i>: extracted topic from data</li>
+                                    <li><i>start_date</i>: start time of event, format of time parameter is "YYYY-mm-dd
+                                        HH:MM"
+                                    </li>
+                                    <li><i>end_date</i>: end time of event</li>
+                                </ul>
+                            </td>
+
+                        </tr>
+                    </div>
+
+                    </tbody>
+                </table>
+
+
+                <br/>
+            </div>
+        </div>
+    </div>
+
+
+{% endblock %}

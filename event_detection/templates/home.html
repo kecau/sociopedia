@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="col-12">
+        <h3>Welcome to SocioPedia System.</h3>
+        <br>
+
+        <div style="text-align: center;">
+            <iframe width="1000" height="500" src="https://www.youtube.com/embed/k5whr58LT9o"
+                    title="SocioPedia for Temporal Knowledge" frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen></iframe>
+        </div>
+        <br>
+        <br>
+
+        <h5>Purposes:</h5>
+        <p>
+            We introduce SocioPedia, which is a real-time knowledge graph completion system using up-to-date
+            extracted knowledge from social networks. SocioPedia aims to perform a real-time automatic light-weight
+            data collection, extract reliable and highly interconnected up-to-date knowledge. Furthermore,
+            SocioPedia provides a user-friendly and intuitive environment, which is optimized for user classes of
+            knowledge graph contributors and domain experts/data analysts.
+        </p>
+        <br>
+        <h5>System Structure and Functionality:</h5>
+        <img src="{% static 'event_detection\systemstructure.png' %}" class="img-fluid rounded mx-auto d-block"/>
+
+        {#            <h5>Technique:</h5>#}
+        {#            <p>#}
+        {#                This sytem is developed base on Django, PostgreSQL for database, Tweepy for streaming data...#}
+        {#            </p>#}
+        {#            <br>#}
+        {##}
+        {#            <h5>System Structure and Functionality:</h5>#}
+        {#            <br>#}
+        {#            <img src="{% static 'event_detection/structure.png' %}" class="img-fluid rounded mx-auto d-block"/>#}
+        {#            <br>#}
+        {#            <br>#}
+        {#            <br>#}
+        {#            <br>#}
+        {#            <img src="{% static 'event_detection/SocioPedia_Flow.png' %}" class="img-fluid rounded mx-auto d-block"/>#}
+        {#            <br>#}
+        {#            <br>#}
+        {#            <br>#}
+        {#            <br>#}
+
+    </div>
+
+{% endblock %}

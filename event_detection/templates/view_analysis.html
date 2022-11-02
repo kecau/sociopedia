@@ -1,0 +1,1123 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block content %}
+    {#    {% load list_index %}#}
+    <div class="pagetitle">
+        <h1>Keywords Management</h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'keywords_management' %}">Keywords Management</a></li>
+                <li class="breadcrumb-item active">View analysis</li>
+            </ol>
+        </nav>
+
+    </div>
+
+
+    <div class="tab-pane fade active show" id="pills-all" role="tabpanel" aria-labelledby="pills-all-tab">
+        <div class="col-12">
+            <head>
+                <script
+                        type="text/javascript"
+                        src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js">
+                </script>
+                <script type="text/javascript"
+                        src="https://unpkg.com/vis-timeline@latest/standalone/umd/vis-timeline-graph2d.min.js"></script>
+                <link href="https://unpkg.com/vis-timeline@latest/styles/vis-timeline-graph2d.min.css"
+                      rel="stylesheet"
+                      type="text/css"/>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+                {#                <script src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.21.0/vis.min.js"></script>#}
+                <script src="{% static 'event_detection/jquery.prettytag.js' %}"></script>
+                <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+                <script>
+                    moment().format();
+                </script>
+                <link rel="stylesheet" href="{% static 'event_detection/prettytag.css' %}">
+                <style type="text/css">
+                    #knowledge-graph {
+                        margin: auto;
+                        width: 80%;
+                        height: 700px;
+                        border: 1px solid lightgray;
+                    }
+
+                    #timeline_knowledge {
+                        margin: auto;
+                        width: 100%;
+                        height: 700px;
+                    }
+
+
+                </style>
+                <canvas hidden id="canvas" width="400" height="400"></canvas>
+                <script>
+                    $(document).ready(function () {
+                        function load_keyword() {
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'load_keyword_ajax' %}",
+                                data: {
+                                    "id": "{{keyword_id}}",
+                                    "start_date": "{{start_date}}",
+                                    "end_date": "{{end_date}}"
+                                },
+                                success: function (response) {
+                                    var keywords = response["top_trends"];
+                                    var dbpedia_keywords = response["dbpedia_keywords"];
+
+                                    $("div#analysis-div").html('');
+                                    $("div#analysis-div").append(
+                                        '<h5>Suggest extracted trends:</h5>' +
+                                        '<ul class="cloud-tags" id="cloudtags1">' +
+                                        '</ul>' +
+                                        '<h5>Suggest DBpedia topics:</h5>' +
+                                        '<ul class="cloud-tags" id="cloudtags2">' +
+                                        '</ul>'
+                                    );
+
+                                    for (var i = 0; i < keywords.length; i++) {
+                                        $("ul#cloudtags1").append(
+                                            '<li><a href="" class="keyword-filter" id="' + keywords[i] + '">' + keywords[i] + '</a></li>'
+                                        );
+                                    }
+                                    ;
+                                    if (dbpedia_keywords != null) {
+                                        for (var i = 0; i < dbpedia_keywords.length; i++) {
+                                            $("ul#cloudtags2").append(
+                                                '<li><a href="" class="keyword-filter" id="' + dbpedia_keywords[i] + '">' + dbpedia_keywords[i] + '</a></li>'
+                                            );
+                                        }
+                                        ;
+                                    }
+
+
+                                    $("div#analysis-div").append(
+                                        '<div id="event-result"></div>'
+                                    );
+
+                                    $(".cloud-tags").prettyTag({
+                                        tagicon: false,
+                                    });
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+                        }
+
+                        function load_tweets_distribute() {
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'load_tweet_dist' %}",
+                                data: {
+                                    "id": "{{keyword_id}}",
+                                },
+                                success: function (response) {
+                                    $("div#tweets-div").html(response["tweets_div"]);
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+                        }
+
+                        function extract_event(filter_key) {
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'detect_event_ajax' %}",
+                                data: {
+                                    "id": "{{keyword_id}}",
+                                    {#"start_date": "{{start_date}}",#}
+                                    {#"end_date": "{{end_date}}",#}
+                                    "trend": filter_key,
+                                },
+                                success: function (response) {
+                                    var event_plot = response["event_plot"];
+                                    var sentiment_plot = response["sentiment_plot"];
+                                    var knowledgegraph = response["knowledgegraph"];
+                                    var db_knowledge_graph = response["db_knowledge_graph"];
+                                    var events = response["events"];
+                                    console.log("trend ", filter_key);
+                                    console.log("events ", events);
+                                    $("div#event-result").html('');
+
+                                    $("div#event-result").append(
+                                        '<h5 class="card-title">Event Timeline:</h5>' +
+                                        '<div class="row">' +
+                                        '<div class="col-md-12" id="event-timeline">' +
+                                        '</div>' +
+                                        '<div class="col-md-12" id="event-timeline-chart">' +
+                                        '</div>' +
+                                        '</div>');
+                                    $("div#event-result").append(
+                                        '<h5 class="card-title">Event Proportion:</h5>' +
+                                        '<div class="row">' +
+                                        '<div class="col-md-12" id="tweet-distribution">' +
+                                        event_plot +
+                                        '</div>' +
+                                        '</div>');
+                                    $("div#event-result").append(
+                                        '<h5 class="card-title">Event List:</h5>' +
+                                        '<table class="table table-hover" id="event-table">' +
+                                        '<thead class="thead-dark">' +
+                                        '<tr>' +
+                                        '<th scope="col"><input type="checkbox" id="selectall" checked>Select all</input></th>' +
+                                        '<th scope="col">#</th>' +
+                                        '<th scope="col">Event start time</th>' +
+                                        '<th scope="col">Event end time</th>' +
+                                        '<th scope="col">No of knowledge</th>' +
+                                        '</tr>' +
+                                        '</thead>' +
+                                        '<tbody>' +
+                                        '</tbody>' +
+                                        '</table>'
+                                    );
+                                    $("div#event-result").append(
+                                        '<h5 class="card-title">Sentiment distribution:</h5>' +
+                                        '<div class="row">' +
+                                        '<div class="col-md-12" id="tweet-distribution">' +
+                                        sentiment_plot +
+                                        '</div>' +
+                                        '</div>');
+                                    if (events.length == 0) {
+                                        $("div#event-result").append(
+                                            '<h5 style="text-align:center">There is no event happen during the time period of streaming data.</h5>' +
+                                            '<h5 style="text-align:center">Keeping streaming data to catch newest events.</h5>'
+                                        );
+                                    } else {
+                                        $("div#event-result").append(
+                                            '<h5 class="card-title">Knowledge graph: </h5>' +
+                                            '<div id="knowledge-graph"></div>' +
+                                            '<div class="row">' +
+                                            '</div>'
+                                        );
+                                        $("div#event-result").append(
+                                            '<br>' +
+                                            '<h5 class="card-title">Timeline visualization: </h5>' +
+                                            '<div id="timeline_knowledge"></div>' +
+                                            '<br>' +
+                                            '<div id="timeline_visualization"></div>' +
+                                            '<br>' +
+                                            '<div id="timeline_visualization_2"></div>' +
+                                            '<br>' +
+                                            '<div class="row">' +
+                                            '</div>'
+                                        );
+                                        $("div#event-result").append(
+                                            '<br>' +
+                                            {#'<h5 class="card-title">SPOs characteristics visualization: </h5>' +#}
+                                            '<br>' +
+                                            '<div id="characteristics_occurrence_time"></div>' +
+                                            '<br>' +
+                                            '<div id="characteristics_diffuse_degree_time"></div>' +
+                                            '<br>' +
+                                            '<div id="characteristics_occurrence_frequency"></div>' +
+                                            '<br>' +
+                                            '<div id="characteristics_diffuse_degree_frequency"></div>' +
+                                            '<br>' +
+                                            '<div id="characteristics_occurrence_psd"></div>' +
+                                            '<br>' +
+                                            '<div id="characteristics_diffuse_degree_psd"></div>' +
+                                            '<div class="row">' +
+                                            '</div>'
+                                        );
+                                        for (var i = 0; i < events.length; i++) {
+                                            count = knowledgegraph[i].length;
+                                            $("#event-table tbody").append(
+                                                `<tr data-item="${i}" id="${i}">
+                                                <th scope="row"><input type="checkbox" class="selectedId" name="selectedId" checked value="${i}"/></th>
+                                                <th scope="row">${i + 1}</th>
+                                                <td>${events[i][0]}</td>
+                                                <td>${events[i][1]}</td>
+                                                <td>${count}</td>
+                                            </tr>`
+                                            );
+                                        }
+                                        $(document).ready(function () {
+                                            $('#selectall').click(function () {
+                                                $('.selectedId').prop('checked', this.checked);
+                                                if ($(this).prop("checked") == true) {
+                                                    event_knowledge(knowledgegraph, db_knowledge_graph, checkid = 'all');
+
+                                                }
+                                                else if ($(this).prop("checked") == false) {
+                                                    console.log("empty");
+                                                    event_knowledge(knowledgegraph, db_knowledge_graph, checkid = 'null');
+                                                }
+                                            });
+                                            $('.selectedId').change(function () {
+                                                var check = ($('.selectedId').filter(":checked").length == $('.selectedId').length);
+                                                var selected = [];
+                                                $('#selectall').prop("checked", check);
+                                                $('input[name=selectedId]:checked').each(function () {
+                                                    selected.push(this.value);
+                                                });
+                                                event_knowledge(knowledgegraph, db_knowledge_graph, checkid = selected)
+
+
+                                            });
+                                        });
+
+                                        event_knowledge(knowledgegraph, db_knowledge_graph, checkid = 'all');
+                                        event_timeline(knowledgegraph, events);
+                                        timeline(knowledgegraph);
+                                        {#timeline_2(knowledgegraph, events);#}
+                                        load_timeline_knowledge(knowledgegraph, events);
+                                        {#characteristics(knowledgegraph, events);#}
+                                    }
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+                        }
+
+
+                        function event_knowledge(knowledgegraphs, db_knowledge_graph, checkid) {
+                            console.log('check', checkid);
+                            console.log('knowledgegraphs', knowledgegraphs);
+                            console.log('db_knowledge_graph', db_knowledge_graph);
+                            var node_list = [];
+                            var edge_list = [];
+                            var added_node = [];
+                            var added_edge = [];
+                            if (checkid == 'all') {
+                                if (knowledgegraphs.length != 0) {
+                                    for (var index = 0; index < knowledgegraphs.length; index++) {
+                                        var event = index + 1;
+                                        var knowledge_graph = knowledgegraphs[index];
+                                        var color = getNewRandomColor(index);
+                                        for (var key in knowledge_graph) {
+                                            var checks = knowledge_graph[key]['is_new_knowledge'].split('-');
+                                            var count = knowledge_graph[key]['mentions'];
+                                            var new_color = '#C5C5C5';
+                                            if (checks[0] == 'db_pedia') {
+                                                if (!added_node.includes('db_' + knowledge_graph[key]['subject'])) {
+                                                    added_node.push('db_' + knowledge_graph[key]['subject']);
+                                                    node_list.push({
+                                                        id: 'db_' + knowledge_graph[key]['subject'],
+                                                        label: knowledge_graph[key]['subject'],
+                                                        value: 1,
+                                                        color: [new_color],
+                                                        shape: 'image',
+                                                        image: draw([new_color]),
+                                                    });
+                                                }
+                                            }
+                                            if (checks[0] != 'db_pedia') {
+                                                if (!added_node.includes(knowledge_graph[key]['subject'])) {
+                                                    added_node.push(knowledge_graph[key]['subject']);
+                                                    if (checks[0] == 'true') {
+                                                        node_list.push({
+                                                            id: knowledge_graph[key]['subject'],
+                                                            label: knowledge_graph[key]['subject'],
+                                                            value: 2 * count,
+                                                            color: [color],
+                                                            shape: 'image',
+                                                            image: draw([color]),
+                                                        });
+                                                    }
+                                                    if (checks[0] == 'false') {
+                                                        node_list.push({
+                                                            id: knowledge_graph[key]['subject'],
+                                                            label: knowledge_graph[key]['subject'],
+                                                            value: 2 * count,
+                                                            color: [color, new_color],
+                                                            shape: 'image',
+                                                            image: draw([color, new_color]),
+                                                        });
+                                                    }
+                                                }
+                                                if (added_node.includes(knowledge_graph[key]['subject'])) {
+                                                    var index_node = added_node.indexOf(knowledge_graph[key]['subject']);
+                                                    if (!node_list[index_node]['color'].includes(color)) {
+                                                        node_list[index_node]['color'].push(color);
+                                                        node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                        node_list[index_node].value = node_list[index_node].value + 2 * count;
+                                                    }
+                                                    if (checks[0] == 'false') {
+                                                        if (!node_list[index_node]['color'].includes(new_color)) {
+                                                            node_list[index_node]['color'].push(new_color);
+                                                            node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            if (checks[1] == 'db_pedia') {
+                                                if (!added_node.includes('db_' + knowledge_graph[key]['object'])) {
+                                                    added_node.push('db_' + knowledge_graph[key]['object']);
+                                                    node_list.push({
+                                                        id: 'db_' + knowledge_graph[key]['object'],
+                                                        label: knowledge_graph[key]['object'],
+                                                        value: 1,
+                                                        color: [new_color],
+                                                        shape: 'image',
+                                                        image: draw([new_color]),
+                                                    });
+                                                }
+                                            }
+                                            if (checks[1] != 'db_pedia') {
+                                                if (!added_node.includes(knowledge_graph[key]['object'])) {
+                                                    added_node.push(knowledge_graph[key]['object']);
+                                                    if (checks[1] == 'true') {
+                                                        node_list.push({
+                                                            id: knowledge_graph[key]['object'],
+                                                            label: knowledge_graph[key]['object'],
+                                                            value: 2 * count,
+                                                            color: [color],
+                                                            shape: 'image',
+                                                            image: draw([color]),
+                                                        });
+                                                    }
+                                                    if (checks[1] == 'false') {
+                                                        node_list.push({
+                                                            id: knowledge_graph[key]['object'],
+                                                            label: knowledge_graph[key]['object'],
+                                                            value: 2 * count,
+                                                            color: [color, new_color],
+                                                            shape: 'image',
+                                                            image: draw([color, new_color]),
+                                                        });
+                                                    }
+                                                }
+                                                if (added_node.includes(knowledge_graph[key]['object'])) {
+                                                    var index_node = added_node.indexOf(knowledge_graph[key]['object']);
+                                                    if (!node_list[index_node]['color'].includes(color)) {
+                                                        node_list[index_node]['color'].push(color);
+                                                        node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                        node_list[index_node].value = node_list[index_node].value + 2 * count;
+                                                    }
+                                                    if (checks[1] == 'false') {
+                                                        if (!node_list[index_node]['color'].includes(new_color)) {
+                                                            node_list[index_node]['color'].push(new_color);
+                                                            node_list[index_node].image = draw(node_list[index_node]['color']);
+
+                                                        }
+                                                    }
+                                                }
+                                            }
+
+                                            if (!added_edge.includes('db_' + knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object'])) {
+                                                added_edge.push('db_' + knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object']);
+                                                edge_list.push({
+                                                    from: 'db_' + knowledge_graph[key]['subject'],
+                                                    to: knowledge_graph[key]['object'],
+                                                    label: knowledge_graph[key]['predicate'],
+                                                    title: 'Knowledge from DBpedia',
+                                                    arrows: "to"
+                                                });
+                                            }
+                                            if (!added_edge.includes(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + 'db_' + knowledge_graph[key]['object'])) {
+                                                added_edge.push(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + 'db_' + knowledge_graph[key]['object']);
+                                                edge_list.push({
+                                                    from: knowledge_graph[key]['subject'],
+                                                    to: 'db_' + knowledge_graph[key]['object'],
+                                                    label: knowledge_graph[key]['predicate'] + '\n' + '[' + knowledge_graph[key]['time_start'] + '-' + knowledge_graph[key]['time_end'] + ']',
+                                                    title: 'Knowledge from DBpedia',
+                                                    arrows: "to"
+                                                });
+                                            }
+                                            if (!added_edge.includes(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object'])) {
+                                                added_edge.push(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object']);
+                                                edge_list.push({
+                                                    from: knowledge_graph[key]['subject'],
+                                                    to: knowledge_graph[key]['object'],
+                                                    label: knowledge_graph[key]['predicate'],
+                                                    title: 'SPO: {' + knowledge_graph[key]['subject'] + ", " + knowledge_graph[key]['predicate'] + ", " + knowledge_graph[key]['object'] + "}" + '\n' + 'Knowledge time: [' + knowledge_graph[key]['time_start'] + '-' + knowledge_graph[key]['time_end'] + ']' + '\n' + knowledge_graph[key]['mentions'] + " mentions from event " + event,
+                                                    arrows: "to"
+                                                });
+                                            }
+                                            if (added_edge.includes(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object'])) {
+                                                var index_tmp = added_edge.indexOf(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object']);
+                                                var tmp = edge_list[index_tmp]['title'];
+                                                var new_tmp = knowledge_graph[key]['mentions'] + " mentions from event " + event;
+                                                if (!tmp.includes(new_tmp)) {
+                                                    edge_list[index_tmp].title = tmp + '\n' + new_tmp;
+                                                }
+
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            else if (checkid == 'null') {
+                                node_list = [];
+                                edge_list = [];
+                                console.log("null")
+                            }
+                            else {
+                                var knowledge_graph_list = [];
+                                for (var check = 0; check < checkid.length; check++) {
+                                    knowledge_graph_list.push(knowledgegraphs[checkid[check]])
+                                }
+                                for (var check = 0; check < checkid.length; check++) {
+                                    var knowledge_graph = knowledgegraphs[checkid[check]];
+                                    var event = parseInt(checkid[check]) + 1;
+                                    var color = getNewRandomColor(checkid[check]);
+                                    for (var key in knowledge_graph) {
+                                        var checks = knowledge_graph[key]['is_new_knowledge'].split('-');
+                                        var count = knowledge_graph[key]['mentions'];
+                                        var new_color = '#C5C5C5';
+                                        if (checks[0] == 'db_pedia') {
+                                            if (!added_node.includes('db_' + knowledge_graph[key]['subject'])) {
+                                                added_node.push('db_' + knowledge_graph[key]['subject']);
+                                                node_list.push({
+                                                    id: 'db_' + knowledge_graph[key]['subject'],
+                                                    label: knowledge_graph[key]['subject'],
+                                                    value: 1,
+                                                    color: [new_color],
+                                                    shape: 'image',
+                                                    image: draw([new_color]),
+                                                });
+                                            }
+                                        }
+                                        if (checks[0] != 'db_pedia') {
+                                            if (!added_node.includes(knowledge_graph[key]['subject'])) {
+                                                added_node.push(knowledge_graph[key]['subject']);
+                                                if (checks[0] == 'true') {
+                                                    node_list.push({
+                                                        id: knowledge_graph[key]['subject'],
+                                                        label: knowledge_graph[key]['subject'],
+                                                        value: 2 * count,
+                                                        color: [color],
+                                                        shape: 'image',
+                                                        image: draw([color]),
+                                                    });
+                                                }
+                                                if (checks[0] == 'false') {
+                                                    node_list.push({
+                                                        id: knowledge_graph[key]['subject'],
+                                                        label: knowledge_graph[key]['subject'],
+                                                        value: 2 * count,
+                                                        color: [color, new_color],
+                                                        shape: 'image',
+                                                        image: draw([color, new_color]),
+                                                    });
+                                                }
+                                            }
+                                            if (added_node.includes(knowledge_graph[key]['subject'])) {
+                                                var index_node = added_node.indexOf(knowledge_graph[key]['subject']);
+                                                if (!node_list[index_node]['color'].includes(color)) {
+                                                    node_list[index_node]['color'].push(color);
+                                                    node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                }
+                                                if (checks[0] == 'false') {
+                                                    if (!node_list[index_node]['color'].includes(new_color)) {
+                                                        node_list[index_node]['color'].push(new_color);
+                                                        node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        if (checks[1] == 'db_pedia') {
+                                            if (!added_node.includes('db_' + knowledge_graph[key]['object'])) {
+                                                added_node.push('db_' + knowledge_graph[key]['object']);
+                                                node_list.push({
+                                                    id: 'db_' + knowledge_graph[key]['object'],
+                                                    label: knowledge_graph[key]['object'],
+                                                    value: 1,
+                                                    color: [new_color],
+                                                    shape: 'image',
+                                                    image: draw([new_color]),
+                                                });
+                                            }
+                                        }
+                                        if (checks[1] != 'db_pedia') {
+                                            if (!added_node.includes(knowledge_graph[key]['object'])) {
+                                                added_node.push(knowledge_graph[key]['object']);
+                                                if (checks[1] == 'true') {
+                                                    node_list.push({
+                                                        id: knowledge_graph[key]['object'],
+                                                        label: knowledge_graph[key]['object'],
+                                                        value: 2 * count,
+                                                        color: [color],
+                                                        shape: 'image',
+                                                        image: draw([color]),
+                                                    });
+                                                }
+                                                if (checks[1] == 'false') {
+                                                    node_list.push({
+                                                        id: knowledge_graph[key]['object'],
+                                                        label: knowledge_graph[key]['object'],
+                                                        value: 2 * count,
+                                                        color: [color, new_color],
+                                                        shape: 'image',
+                                                        image: draw([color, new_color]),
+                                                    });
+                                                }
+                                            }
+                                            if (added_node.includes(knowledge_graph[key]['object'])) {
+                                                var index_node = added_node.indexOf(knowledge_graph[key]['object']);
+                                                if (!node_list[index_node]['color'].includes(color)) {
+                                                    node_list[index_node]['color'].push(color);
+                                                    node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                }
+                                                if (checks[1] == 'false') {
+                                                    if (!node_list[index_node]['color'].includes(new_color)) {
+                                                        node_list[index_node]['color'].push(new_color);
+                                                        node_list[index_node].image = draw(node_list[index_node]['color']);
+                                                    }
+                                                }
+                                            }
+                                        }
+
+                                        if (!added_edge.includes('db_' + knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object'])) {
+                                            added_edge.push('db_' + knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object']);
+                                            edge_list.push({
+                                                from: 'db_' + knowledge_graph[key]['subject'],
+                                                to: knowledge_graph[key]['object'],
+                                                label: knowledge_graph[key]['predicate'],
+                                                title: 'Knowledge from DBpedia',
+                                                arrows: "to"
+                                            });
+                                        }
+                                        if (!added_edge.includes(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + 'db_' + knowledge_graph[key]['object'])) {
+                                            added_edge.push(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + 'db_' + knowledge_graph[key]['object']);
+                                            edge_list.push({
+                                                from: knowledge_graph[key]['subject'],
+                                                to: 'db_' + knowledge_graph[key]['object'],
+                                                label: knowledge_graph[key]['predicate'] + '\n' + '[' + knowledge_graph[key]['time_start'] + '-' + knowledge_graph[key]['time_end'] + ']',
+                                                title: 'Knowledge from DBpedia',
+                                                arrows: "to"
+                                            });
+                                        }
+                                        if (!added_edge.includes(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object'])) {
+                                            added_edge.push(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object']);
+                                            edge_list.push({
+                                                from: knowledge_graph[key]['subject'],
+                                                to: knowledge_graph[key]['object'],
+                                                label: knowledge_graph[key]['predicate'],
+                                                title: 'SPO: {' + knowledge_graph[key]['subject'] + ", " + knowledge_graph[key]['predicate'] + ", " + knowledge_graph[key]['object'] + "}" + '\n' + 'Knowledge time: [' + knowledge_graph[key]['time_start'] + '-' + knowledge_graph[key]['time_end'] + ']' + '\n' + knowledge_graph[key]['mentions'] + " mentions from event " + event,
+                                                arrows: "to"
+                                            });
+                                        }
+                                        if (added_edge.includes(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object'])) {
+                                            var index_tmp = added_edge.indexOf(knowledge_graph[key]['subject'] + "-" + knowledge_graph[key]['predicate'] + "-" + knowledge_graph[key]['object']);
+                                            var tmp = edge_list[index_tmp]['title'];
+                                            var new_tmp = knowledge_graph[key]['mentions'] + " mentions from event " + event;
+                                            if (!tmp.includes(new_tmp)) {
+                                                edge_list[index_tmp].title = tmp + '\n' + new_tmp;
+                                            }
+
+                                        }
+                                    }
+                                }
+                            }
+                            var container = document.getElementById("knowledge-graph");
+                            var options = {
+                                {#width: width + 'px',#}
+                                {#height: height + 'px',#}
+                                nodes: {
+                                    font: {
+                                        size: 14,
+                                    },
+                                },
+                                edges: {
+                                    font: {
+                                        size: 14,
+                                    },
+
+                                }
+                            };
+                            var nodes = new vis.DataSet(node_list);
+                            var edges = new vis.DataSet(edge_list);
+                            var data = {
+                                nodes: nodes,
+                                edges: edges,
+                            };
+                            var network = new vis.Network(container, data, options);
+                        }
+
+                        function event_timeline(knowledgegraphs, events) {
+                            console.log("check event_timeline");
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'event_timeline' %}",
+                                data: {
+                                    "knowledgegraphs": JSON.stringify(knowledgegraphs),
+                                    "events": JSON.stringify(events),
+                                },
+                                success: function (response) {
+                                    console.log("check event_timeline success");
+                                    $("div#event-timeline").html(response["plot_event_timeline"]);
+                                    $("div#event-timeline-chart").html(response["plot_event_timeline_chart"]);
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+
+                        }
+
+                        function load_timeline_knowledge(knowledgegraph, event) {
+                            console.log("check load_timeline_knowledge");
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'load_timeline_knowledge' %}",
+                                data: {
+                                    "knowledgegraph": JSON.stringify(knowledgegraph),
+                                    "event": JSON.stringify(event),
+                                    "keyword_id": {{keyword_id}}
+                                },
+                                success: function (response) {
+                                    console.log("check load_timeline_knowledge success");
+                                    $("div#timeline_visualization").html(response["plot_timeline_knowledge"]);
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+                        }
+
+                        function timeline(knowledgegraphs) {
+                            console.log("check timeline");
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'load_timeline' %}",
+                                data: {
+                                    "knowledgegraph": JSON.stringify(knowledgegraphs),
+                                },
+                                success: function (response) {
+                                    console.log("check load_timeline success");
+                                    {#console.log("check load_timeline success");#}
+                                    $("div#timeline_knowledge").html(response["plot_timeline_visual"]);
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+                        }
+
+                        function timeline_2(knowledgegraphs, events) {
+                            console.log("check timeline_2");
+                            var items_list = [];
+                            var added_item = [];
+                            if (knowledgegraphs.length != 0) {
+                                for (var index = 0; index < knowledgegraphs.length; index++) {
+                                    var knowledge_graph = knowledgegraphs[index];
+                                    var color = getNewRandomColor(index);
+                                    var bgcolor = getBGRandomColor(index);
+                                    items_list.push({
+                                        id: "event" + index,
+                                        content: "Event " + (index + 1) + ": " + events[index][0] + "-" + events[index][1],
+                                        start: events[index][0],
+                                        end: events[index][1],
+                                        type: "background",
+                                        style: "background-color: " + bgcolor,
+                                    });
+                                    for (var key in knowledge_graph) {
+                                        if (!added_item.includes(knowledge_graph[key]['subject'] + " " + knowledge_graph[key]['predicate'] + " " + knowledge_graph[key]['object'])) {
+                                            added_item.push(knowledge_graph[key]['subject'] + " " + knowledge_graph[key]['predicate'] + " " + knowledge_graph[key]['object']);
+                                            items_list.push({
+                                                id: knowledge_graph[key]['subject'] + " " + knowledge_graph[key]['predicate'] + " " + knowledge_graph[key]['object'],
+                                                content: knowledge_graph[key]['subject'] + " " + knowledge_graph[key]['predicate'] + " " + knowledge_graph[key]['object'],
+                                                start: knowledge_graph[key]['time_start'],
+                                                end: knowledge_graph[key]['time_end'],
+                                                style: "background-color: " + color,
+                                            })
+                                        }
+                                        if (added_item.includes(knowledge_graph[key]['subject'] + " " + knowledge_graph[key]['predicate'] + " " + knowledge_graph[key]['object'])) {
+
+                                        }
+
+                                    }
+
+                                }
+                            }
+                            var items = new vis.DataSet(items_list);
+
+                            var container = document.getElementById("timeline_visualization_2");
+                            var options = {
+                                editable: true, // default for all items
+                            };
+
+                            var timeline = new vis.Timeline(container, items, options);
+
+                        }
+
+                        function characteristics(knowledgegraph, events) {
+                            console.log("check characteristics");
+                            $.ajax({
+                                type: 'POST',
+                                url: "{% url 'load_characteristics' %}",
+                                data: {
+                                    "knowledgegraph": JSON.stringify(knowledgegraph),
+                                    "event": JSON.stringify(events),
+                                    "keyword_id": {{keyword_id}}
+                                },
+                                success: function (response) {
+                                    console.log("check load_characteristics success");
+                                    $("div#characteristics_occurrence_time").html(response["plot_div_occurrence_time"]);
+                                    $("div#characteristics_diffuse_degree_time").html(response["plot_div_diffuse_degree_time"]);
+                                    $("div#characteristics_occurrence_frequency").html(response["plot_div_occurrence_frequency"]);
+                                    $("div#characteristics_diffuse_degree_frequency").html(response["plot_div_diffuse_degree_frequency"]);
+                                    $("div#characteristics_occurrence_psd").html(response["plot_div_occurrence_psd"]);
+                                    $("div#characteristics_diffuse_degree_psd").html(response["plot_div_diffuse_degree_psd"]);
+                                },
+                                error: function (response) {
+                                    alert(response["responseJSON"]["error"]);
+                                }
+                            });
+                        }
+
+                        load_tweets_distribute();
+                        load_keyword();
+                        $('body').on('click', 'a.keyword-filter', function (e) {
+                            e.preventDefault();
+                            var filter_key = $(this).attr('id');
+
+                            $("div#event-result").html(
+                                '<div class="d-flex justify-content-center">' +
+                                '<div class="spinner-border" style="width: 100px; height: 100px;">' +
+                                '<span class="visually-hidden">Loading...</span>' +
+                                '</div>' +
+                                '</div>'
+                            );
+                            extract_event(filter_key);
+                        });
+
+                    });
+
+                    function draw(colors) {
+                        var canvas = document.getElementById("canvas");
+                        var ctx = canvas.getContext("2d");
+                        // Temporary variables, to store each arc angles
+                        var beginAngle = 0;
+                        var endAngle = 0;
+
+                        // Iterate through the angles
+                        for (var i = 0; i < colors.length; i = i + 1) {
+                            // Begin where we left off
+                            beginAngle = endAngle;
+                            // End Angle
+                            endAngle = endAngle + Math.PI * 2 / colors.length;
+
+                            ctx.beginPath();
+                            // Fill color
+                            ctx.fillStyle = colors[i % colors.length];
+
+                            // Same code as before
+                            ctx.moveTo(200, 200);
+                            ctx.arc(200, 200, 120, beginAngle, endAngle);
+                            ctx.lineTo(200, 200);
+                            ctx.stroke();
+
+                            // Fill
+                            ctx.fill();
+                        }
+                        return canvas.toDataURL()
+                    }
+
+                    function getNewRandomColor(i) {
+                        var colors = ['#FF7F50', '#9D50BB', '#FFD801', '#5CB3FF', '#FF4E50', '#3EA055', '#01C6FF',
+                            '#FF0084', '#ADD100', '#81D8D0', '#3B9C9C', '#D38312', '#95B995', '#94FFFF', '#9481FF',
+                            '#2e48f2', '#4f55c6', '#5ebc2b', '#064d99', '#1e0c75', '#64158e', '#d2f740', '#f733e7',
+                            '#9e033b', '#fcbe67', '#3d38d8', '#4a73ad', '#59eab5', '#84e209', '#e3e562', '#9df74f',
+                            '#9f0ddd', '#5b95d8', '#5fcc49', '#d89038', '#f96bd3', '#4ded21', '#40a8f7', '#29999b',
+                            '#ad60ff', '#58c8e8', '#ff68a2', '#02156d', '#58d3b4', '#1a5f84', '#dd8339', '#1bc168',
+                            '#ce9d21', '#deef6b', '#a650ce', '#00c4c1', '#5ddd5f', '#2ded49', '#4dead5', '#185bf7'];
+                        {#return colors[Math.floor(Math.random() * colors.length)];#}
+                        return colors[i];
+                    }
+
+                    function getBGRandomColor(i) {
+                        var colors = ['#ffc5b0', '#d2b0e0', '#ffed8c', '#b5dcff', '#ffafb0', '#a8d4b2', '#8ce5ff', '#ff8cc7', '#daea8c',
+                            '#c6ede9', '#a6d2d2', '#ebc794', '#cfdfcf', '#ceffff', '#cec6ff', '#a0acf9', '#afb2e5', '#b6e09f',
+                            '#8eaed1', '#9991c0', '#b995cc', '#eafba9', '#fba3f4', '#d38da6', '#fde1ba', '#a7a5ed', '#adc0da',
+                            '#b4f5dd', '#c7f190', '#f2f3b8', '#d2fbaf', '#d392ef', '#b5cfed', '#b7e8ad', '#edcda5', '#fcbceb',
+                            '#aef69b', '#a9d7fb', '#9ed1d2', '#dab7ff', '#b3e6f4', '#ffbbd5', '#8d95bd', '#b3ebdd', '#97b7c7',
+                            '#efc7a5', '#98e3bb', '#e8d29b', '#f0f7bc', '#d6b0e8', '#8ce4e3', '#b6efb7', '#a0f6ad', '#aef5ec',
+                            '#97b5fb'];
+                        {#return colors[Math.floor(Math.random() * colors.length)];#}
+                        return colors[i];
+                    }
+
+                </script>
+
+            </head>
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Tweets in time distribution:</h5>
+                    <div id="tweets-div">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    <h5 class="card-title">Select a topic to view analysis:</h5>
+                    <div id="analysis-div">
+                        <div class="d-flex justify-content-center">
+                            <div class="spinner-border">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script>
+            const colors = [
+                "#dae466",
+                "#01c84f",
+                "#e98bc6",
+                "#25ad84",
+                "#a9d62a",
+                "#fd4ba2",
+                "#f5b4f5",
+                "#592968",
+                "#dca565",
+                "#2690e8",
+                "#eec717",
+                "#f09fc0",
+                "#0369ac",
+                "#b52077",
+                "#d8b81f",
+                "#3acfe1",
+                "#d04830",
+                "#75012c",
+                "#d83393",
+                "#29f315",
+                "#df7c3c",
+                "#682c62",
+                "#7c69da",
+                "#676c5b",
+                "#946420",
+                "#6554e7",
+                "#3e3aa1",
+                "#1bf009",
+                "#ff3847",
+                "#c80dd5",
+                "#f3a345",
+                "#70c79d",
+                "#f4af08",
+                "#10a7d2",
+                "#30c5df",
+                "#a1435c",
+                "#63cf2a",
+                "#bd9e7c",
+                "#e8dfb4",
+                "#5237d2",
+                "#e6e36f",
+                "#29bf8e",
+                "#cc8771",
+                "#cf38ae",
+                "#d1ffb9",
+                "#a154bf",
+                "#711740",
+                "#128a0c",
+                "#f17a08",
+                "#095284",
+                "#3b5d7a",
+                "#99ff99",
+                "#b292fa",
+                "#2d3f32",
+                "#3f0664",
+                "#d6945d",
+                "#b020b2",
+                "#0296e7",
+                "#121194",
+                "#6cd6c6",
+                "#0801a0",
+                "#74184f",
+                "#25aa6c",
+                "#542741",
+                "#3bce6e",
+                "#28b618",
+                "#3733ff",
+                "#5ae693",
+                "#94cc2d",
+                "#8d63b2",
+                "#7e02ce",
+                "#8b78b9",
+                "#4a724e",
+                "#c2c11c",
+                "#f72670",
+                "#b9e1da",
+                "#5c4203",
+                "#fe3028",
+                "#4aa7fe",
+                "#679baa",
+                "#b84834",
+                "#affbd2",
+                "#c97c88",
+                "#86831c",
+                "#542741",
+                "#3bce6e",
+                "#28b618",
+                "#3733ff",
+                "#5ae693",
+                "#94cc2d",
+                "#8d63b2",
+                "#7e02ce",
+                "#8b78b9",
+                "#4a724e",
+                "#c2c11c",
+                "#f72670",
+                "#b9e1da",
+                "#5c4203",
+                "#fe3028",
+                "#4aa7fe",
+                "#679baa",
+                "#b84834",
+                "#affbd2",
+                "#c97c88",
+                "#86831c",
+                "#4e45e0",
+                "#2a81a1",
+                "#d0f8dc",
+                "#31c9b1",
+                "#51c054",
+                "#e6d9ac",
+                "#ca8982",
+                "#7e6d70",
+                "#dc5bc7",
+                "#c61de0",
+                "#61a0c1",
+                "#b38682",
+                "#c239b9",
+                "#94638e",
+                "#ed2277",
+                "#17e60c",
+                "#1bc95f",
+                "#265461",
+                "#56ba45",
+                "#b1a8ef",
+                "#03e5c8",
+                "#74d5f4",
+                "#56b0b3",
+                "#df104f",
+                "#073ee3",
+                "#a97562",
+                "#a62674",
+                "#ccc58b",
+                "#c8c4ec",
+                "#96f0e3",
+                "#4ec774",
+                "#97d7cd",
+                "#24962c",
+                "#3af516",
+                "#2ab922",
+                "#72f961",
+                "#bc5c65",
+                "#6c4d01",
+                "#0344e9",
+                "#ba2773",
+                "#18d3d8",
+                "#ea8d0d",
+                "#8455d2",
+                "#174108",
+                "#50bb6d",
+                "#1b257f",
+                "#821669",
+                "#6fd939",
+                "#dbd488",
+                "#124ed2",
+                "#945919",
+                "#c6bd90",
+                "#d844fd",
+                "#c83da2",
+                "#9b6fe8",
+                "#265f29",
+                "#aebcc3",
+                "#137623",
+                "#9fa95a",
+                "#bdf930",
+                "#9cf419",
+                "#4cf6f6",
+                "#0ec977",
+                "#51fef6",
+                "#95d7dd",
+                "#242c68",
+                "#a4e4e7",
+                "#da8281",
+                "#4a2ed3",
+                "#8e09d2",
+                "#d63e82",
+                "#6e8c77",
+                "#e9ae6c",
+                "#222581",
+                "#731445",
+                "#ff37a4",
+                "#3117be",
+                "#c79f9b",
+                "#3c3e54",
+                "#229335",
+                "#3c633e",
+                "#061460",
+                "#c41fb2",
+                "#91f19c",
+                "#9ef867",
+                "#d6b472",
+                "#4c7510",
+                "#296bd2",
+                "#618ef3",
+                "#93e95e",
+                "#979099",
+                "#2517b9",
+                "#210433",
+                "#b9b16e",
+                "#d56d87",
+                "#3aeb94",
+                "#3cc156",
+                "#49bfac",
+                "#379d09",
+                "#fdd9f9",
+                "#2fd4aa",
+                "#82bdf3",
+                "#fac112",
+                "#4d83b4",
+                "#80177e",
+                "#596c4a",
+                "#f2fc7c",
+                "#58451c",
+                "#45825b",
+                "#c3b34c",
+                "#838888",
+                "#1f7f0e",
+                "#f52724",
+                "#b4cde7",
+                "#09537d",
+                "#d73d13",
+                "#c8dd5e",
+                "#11bdde",
+                "#f6db4c",
+                "#07986f",
+                "#a1c5e0",
+                "#53275e",
+                "#b203a6",
+                "#146c9e",
+                "#b12bcc",
+                "#1d7dde",
+                "#5cda6f",
+                "#db9d52",
+                "#1551d5",
+                "#ca0cf7",
+                "#3a0161",
+                "#b4060e",
+                "#789425",
+                "#f39dd5",
+                "#d67f7e",
+                "#cb13fb",
+                "#2ee935",
+                "#c9fcbd",
+                "#642095",
+                "#6ae425",
+                "#65b5a7",
+                "#f0044e",
+                "#5991ea",
+                "#7f6d17",
+                "#a64bf8",
+                "#e0e87b",
+                "#23af1d",
+            ];
+        </script>
+    </div>
+
+
+
+
+{% endblock %}

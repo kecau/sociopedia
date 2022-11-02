@@ -1,0 +1,72 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="pagetitle">
+        <h1>Tokens Management</h1>
+        <nav>
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                <li class="breadcrumb-item">Tokens Management</li>
+            </ol>
+        </nav>
+    </div>
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                {% load crispy_forms_tags %}
+                <h5 class="card-title">Adding tokens</h5>
+                <div class="row mt-2">
+                    <div class="col-md-12">
+                        <form method="POST" id="token-form" class="post-form" novalidate>
+                            {% csrf_token %}
+                            {{ form|crispy }}
+                            <button type="submit" class="btn btn-primary">Add Token</button>
+                        </form>
+                    </div>
+                </div>
+
+                <br/>
+                <h5 class="card-title">Managing tokens</h5>
+                <table class="table table-hover">
+                    <thead>
+                    <tr>
+                        <th scope="col">#</th>
+                        <th scope="col">Consumer key</th>
+                        <th scope="col">Consumer secret</th>
+                        <th scope="col">Access token</th>
+                        <th scope="col">Access token secret</th>
+                        <th scope="col">Streaming process</th>
+                        <th scope="col">User</th>
+                        <th scope="col">Delete</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for token in tokens %}
+                        <div>
+                            <tr id="tr-{{ token.id }}">
+                                <th scope="row">{{ forloop.counter }}</th>
+                                <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ token.consumer_key }}</td>
+                                <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ token.consumer_secret }}</td>
+                                <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ token.access_token }}</td>
+                                <td style="word-wrap: break-word;min-width: 160px;max-width: 160px;">{{ token.access_token_secret }}</td>
+                                <td style="text-align: center;">{{ token.used_count }}</td>
+                                <td>{{ token.user }}</td>
+                                <td>
+                                    {% if token.user.username == "admin" %}
+                                    {% else %}
+                                        <a href="{% url 'delete_token' pk=token.pk %}">Delete</a>
+                                    {% endif %}
+
+
+                                </td>
+                            </tr>
+                        </div>
+                    {% endfor %}
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
