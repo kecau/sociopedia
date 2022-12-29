@@ -11,11 +11,7 @@ from tqdm import tqdm
 import tweepy
 from event_detection.utils import datetime_utils
 
-# Enter Twitter API Keys
-consumer_key = 'UrjKcF93o1K8nPpRTVaR46M3b'
-consumer_secret = 'zqXwrHxzcQj219W477abf2kTsNXNupZRbg9ZyJvKxZiPzaT90H'
-access_token = '1374321478179581954-vwXT8LXDY4RU29lPNRVY56bTZVss5u'
-access_token_secret = 'XHRd23nKpI0XUXu1Ki0V9XYS4yObMfMUAG2W8OswIyiqo'
+
 # authorization of consumer key and consumer secret
 auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
 
